@@ -2,69 +2,90 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SEVEN.FOUR - Interactive Hue</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SEVEN.FOUR - ACCESS</title>
   <style>
     /* RESET & BASIC SETUP */
     html, body {
       margin: 0; width: 100%; height: 100%;
       overflow: hidden; background: #050505;
       font-family: 'Courier New', Courier, monospace;
+      /* Prevent native touch scrolling on Android */
+      touch-action: none; 
     }
     #app { width: 100%; height: 100%; display: block; }
 
-    /* --- FOOTER LAYOUT --- */
-    #footer {
-      position: absolute;
-      bottom: 25px;
-      left: 25px;
-      z-index: 100;
-      color: rgba(255, 255, 255, 0.4);
-      display: flex;
+    /* --- SPLASH SCREEN OVERLAY --- */
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); /* Slightly darker for contrast */
+      z-index: 999;
+      display: flex; justify-content: center; align-items: center;
       flex-direction: column;
-      gap: 10px;
-      pointer-events: auto; 
-    }
-
-    /* INFO BLOCK */
-    .info {
-      font-size: 11px;
-      line-height: 1.4;
-      letter-spacing: 1px;
-    }
-    .info .name { font-weight: bold; opacity: 0.8; color: #fff; }
-    .info a {
-      color: rgba(255, 255, 255, 0.4);
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s;
-    }
-    .info a:hover {
-      color: #fff; border-bottom-color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.8);
-    }
-
-    /* --- HUE SLIDER STYLING --- */
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      color: white;
+      transition: opacity 0.5s ease, visibility 0.5s;
     }
     
-    label { font-size: 10px; text-transform: uppercase; opacity: 0.5; }
-
-    input[type=range] {
-      -webkit-appearance: none;
-      width: 120px;
-      height: 2px;
-      background: rgba(255,255,255,0.2);
-      outline: none;
+    /* The main button */
+    #startBtn {
+      border: 2px solid white; /* Thicker border for mobile tappability */
+      padding: 20px 40px;
       cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 3px;
+      font-weight: bold;
+      font-size: 16px;
+      background: transparent;
+      color: white;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+    #startBtn:active { background: white; color: black; } /* Active state for touch */
+
+    /* Subtitle below button */
+    .subtitle { margin-top: 15px; font-size: 11px; opacity: 0.6; letter-spacing: 1px; }
+    
+    /* SEVEN.FOUR moved here */
+    .overlay-name {
+        margin-top: 30px;
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        opacity: 0.9;
+    }
+
+
+    /* --- FOOTER LAYOUT (Bottom Left) --- */
+    #footer {
+      position: absolute; bottom: 25px; left: 25px; z-index: 100;
+      color: rgba(255, 255, 255, 0.4);
+      display: flex; flex-direction: column; gap: 15px;
+      pointer-events: auto; 
+      /* Ensure it doesn't get too close to edge on curved Android screens */
+      padding-bottom: env(safe-area-inset-bottom); 
+      padding-left: env(safe-area-inset-left);
+    }
+    
+    /* Links block */
+    .info { font-size: 12px; line-height: 1.4; letter-spacing: 1px; }
+    /* Name removed from here */
+    .info a {
+      color: rgba(255, 255, 255, 0.6); text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.3s;
+      padding-bottom: 2px;
+    }
+    .info a:hover { color: #fff; border-bottom-color: #fff; text-shadow: 0 0 8px white; }
+
+    /* --- HUE SLIDER --- */
+    .controls { display: flex; align-items: center; gap: 10px; }
+    label { font-size: 10px; text-transform: uppercase; opacity: 0.5; }
+    input[type=range] {
+      -webkit-appearance: none; width: 120px; height: 4px; /* Thicker for mobile */
+      background: rgba(255,255,255,0.2); outline: none; 
     }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 10px; height: 10px;
-      background: #fff;
-      border-radius: 50%;
-      box-shadow: 0 0 10px #fff;
+      -webkit-appearance: none; width: 16px; height: 16px; /* Larger thumb for touch */
+      background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;
     }
   </style>
 </head>
@@ -72,14 +93,18 @@
   
   <div id="app"></div>
 
+  <div id="overlay">
+    <button id="startBtn">ENTER ACCESS</button>
+    <div class="subtitle">TAP TO ENABLE IMMERSIVE MODE</div>
+    <div class="overlay-name">SEVEN.FOUR</div>
+  </div>
+
   <div id="footer">
     <div class="controls">
       <label>HUE</label>
       <input type="range" id="hueSlider" min="0" max="1" step="0.01" value="0.08">
     </div>
-
     <div class="info">
-      <div class="name">SEVEN.FOUR</div>
       <a href="https://linktr.ee/seven.four" target="_blank">Visual Diary</a>
     </div>
   </div>
@@ -89,42 +114,35 @@
 
     // --- TEXTURES ---
     function createGlowTexture() {
-      const canvas = document.createElement('canvas');
-      canvas.width = 128; canvas.height = 128;
+      const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
       const ctx = canvas.getContext('2d');
       const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
       gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
       gradient.addColorStop(0.2, 'rgba(255, 240, 200, 0.6)');
-      gradient.addColorStop(0.5, 'rgba(255, 100, 50, 0.2)');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 128, 128);
       return new THREE.CanvasTexture(canvas);
     }
 
     function createTextTexture(text) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024; canvas.height = 512;
+        const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.fillRect(0,0, canvas.width, canvas.height);
-        const fontSize = 80;
-        ctx.font = `bold ${fontSize}px "Courier New", monospace`; 
+        const fontSize = 80; ctx.font = `bold ${fontSize}px "Courier New", monospace`; 
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
         const lines = text.split('\n');
         const lineHeight = fontSize * 1.2;
         const totalHeight = lines.length * lineHeight;
         const startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
         lines.forEach((line, index) => { ctx.fillText(line.toUpperCase(), canvas.width / 2, startY + (index * lineHeight)); });
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        return texture;
+        const texture = new THREE.CanvasTexture(canvas); texture.needsUpdate = true; return texture;
     }
 
     const app = document.getElementById("app");
 
     // --- 1. SETUP ---
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Important for high-DPI Android screens
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
@@ -137,147 +155,141 @@
     camera.position.set(0, 6, 25);
     camera.lookAt(0, 0, 0);
 
-    // --- 2. LIGHTING & CORE ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-    scene.add(ambientLight);
-    
-    const sunLight = new THREE.PointLight(0xffaa00, 200, 100);
-    scene.add(sunLight);
+    // --- 2. OBJECTS ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); scene.add(ambientLight);
+    const sunLight = new THREE.PointLight(0xffaa00, 200, 100); scene.add(sunLight);
 
-    const coreGeometry = new THREE.IcosahedronGeometry(1.5, 1);
-    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffddaa, wireframe: true });
-    const coreMesh = new THREE.Mesh(coreGeometry, coreMaterial);
+    const coreMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), new THREE.MeshBasicMaterial({ color: 0xffddaa, wireframe: true }));
     scene.add(coreMesh);
-
-    const glowMat = new THREE.SpriteMaterial({
-        map: createGlowTexture(), color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, opacity: 1.0, depthWrite: false
-    });
-    const glowSprite = new THREE.Sprite(glowMat);
-    glowSprite.scale.set(12, 12, 1);
-    scene.add(glowSprite);
-
-    // --- 3. CRYSTALS ---
-    const PARTICLE_COUNT = 3000;
-    const MAX_RADIUS = 20;
-    const geometry = new THREE.OctahedronGeometry(0.2, 0);
-    const material = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff, metalness: 0.1, roughness: 0.1, transmission: 0.2, thickness: 1.0, clearcoat: 1.0, ior: 1.7,
-    });
-    const mesh = new THREE.InstancedMesh(geometry, material, PARTICLE_COUNT);
-    scene.add(mesh);
     
-    // Store original position data so we can update colors efficiently
-    const particleData = []; 
-    const dummy = new THREE.Object3D();
+    const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: createGlowTexture(), color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, opacity: 1.0, depthWrite: false
+    }));
+    glowSprite.scale.set(12, 12, 1); scene.add(glowSprite);
 
+    // Crystals
+    const PARTICLE_COUNT = 3000;
+    const mesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.2, 0), new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, metalness: 0.1, roughness: 0.1, transmission: 0.2, thickness: 1.0, ior: 1.7,
+    }), PARTICLE_COUNT);
+    scene.add(mesh);
+
+    const particleData = []; const dummy = new THREE.Object3D();
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const r = Math.pow(Math.random(), 0.6) * MAX_RADIUS + 2;
+      const r = Math.pow(Math.random(), 0.6) * 20 + 2;
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
-      
       dummy.position.set(r * Math.sin(phi) * Math.cos(theta), (r * Math.cos(phi)) * 0.5, r * Math.sin(phi) * Math.sin(theta));
       dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
-      const scale = Math.random();
-      dummy.scale.set(scale, scale, scale);
-      dummy.updateMatrix();
+      const scale = Math.random(); dummy.scale.set(scale, scale, scale); dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
-      
-      // Store distance factor (0 to 1) for gradient calculation
-      particleData.push({ 
-          index: i, 
-          factor: (r - 2) / MAX_RADIUS 
-      });
+      particleData.push({ index: i, factor: (r - 2) / 20 });
     }
 
-    // --- COLOR UPDATE FUNCTION ---
-    const coreColor = new THREE.Color();
-    const haloColor = new THREE.Color();
-    const tempColor = new THREE.Color();
-
+    // Color Logic
+    const coreColor = new THREE.Color(); const haloColor = new THREE.Color(); const tempColor = new THREE.Color();
     function updateColors(hue) {
-        // 1. Update Core & Glow
-        // Hue input is 0-1. 
-        // Saturation 1.0, Lightness 0.5
         coreColor.setHSL(hue, 1.0, 0.6); 
-        
-        // Halo is the complementary color (hue + 0.5) or offset
         haloColor.setHSL((hue + 0.6) % 1.0, 1.0, 0.5); 
-
-        // Apply to scene objects
-        sunLight.color.copy(coreColor);
-        coreMesh.material.color.copy(coreColor);
-        glowSprite.material.color.copy(coreColor);
-
-        // 2. Loop through crystals and update gradient
+        sunLight.color.copy(coreColor); coreMesh.material.color.copy(coreColor); glowSprite.material.color.copy(coreColor);
         for(let i=0; i < PARTICLE_COUNT; i++) {
-            const data = particleData[i];
-            // Mix core and halo based on distance factor
-            tempColor.copy(coreColor).lerp(haloColor, data.factor);
-            mesh.setColorAt(data.index, tempColor);
+            const data = particleData[i]; tempColor.copy(coreColor).lerp(haloColor, data.factor); mesh.setColorAt(data.index, tempColor);
         }
         mesh.instanceColor.needsUpdate = true;
     }
+    updateColors(0.08);
+    // Use 'input' for smooth sliding on desktop, 'change' sometimes better for mobile performance if needed
+    document.getElementById('hueSlider').addEventListener('input', (e) => updateColors(parseFloat(e.target.value)));
 
-    // Initialize with default Hue (Orange-ish)
-    updateColors(0.08); 
-
-    // --- SLIDER EVENT LISTENER ---
-    document.getElementById('hueSlider').addEventListener('input', (e) => {
-        const hue = parseFloat(e.target.value);
-        updateColors(hue);
-    });
-
-
-    // --- 4. BACKGROUND STARS ---
-    const bgGeo = new THREE.BufferGeometry();
-    const bgPos = new Float32Array(2000 * 3);
+    // Stars
+    const bgGeo = new THREE.BufferGeometry(); const bgPos = new Float32Array(2000 * 3);
     for(let i = 0; i < 2000 * 3; i++) bgPos[i] = (Math.random() - 0.5) * 300;
     bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
     const bgStars = new THREE.Points(bgGeo, new THREE.PointsMaterial({ size: 0.2, color: 0x666699, transparent: true, opacity: 0.4, sizeAttenuation: true }));
     scene.add(bgStars);
 
-
-    // --- 5. VHS GLITCH TEXT ---
+    // Text
     const vhsVertexShader = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
     const vhsFragmentShader = `uniform sampler2D uTexture;uniform float uTime;varying vec2 vUv;float random(vec2 st){return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123);}void main(){vec2 uv=vUv;float glitchStrength=0.0;if(mod(uTime,3.0)>2.8){glitchStrength=0.02;}float jitter=random(vec2(uTime,uv.y))*0.005+glitchStrength;uv.x+=(random(vec2(uTime*10.0,uv.y))-0.5)*glitchStrength;float r=texture2D(uTexture,uv+vec2(0.005,0.0)).r;float g=texture2D(uTexture,uv).g;float b=texture2D(uTexture,uv-vec2(0.005,0.0)).b;float scanline=sin(uv.y*500.0+uTime*10.0)*0.1;float noise=random(uv*uTime)*0.1;vec3 color=vec3(r,g,b);color-=scanline;color+=noise;float alpha=max(r,max(g,b));if(alpha<0.1)discard;float wave=(sin(uTime*1.5)+1.0)*0.5;float opacityPulse=0.2+(0.8*wave);gl_FragColor=vec4(color,alpha*opacityPulse);}`;
-
-    const textTexture = createTextTexture("IF I LET YOU GO\nI'LL LOSE THE ONLY\nLIE THAT EVER MADE\nME FEEL ALIVE");
     const textMaterial = new THREE.ShaderMaterial({
-        uniforms: { uTexture: { value: textTexture }, uTime: { value: 0 } },
+        uniforms: { uTexture: { value: createTextTexture("IF I LET YOU GO\nI'LL LOSE THE ONLY\nLIE THAT EVER MADE\nME FEEL ALIVE") }, uTime: { value: 0 } },
         vertexShader: vhsVertexShader, fragmentShader: vhsFragmentShader, transparent: true, side: THREE.DoubleSide
     });
     const textPlane = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), textMaterial);
-    textPlane.position.set(0, 2, 12); 
-    scene.add(textPlane);
+    textPlane.position.set(0, 2, 12); scene.add(textPlane);
 
 
-    // --- 6. ANIMATION ---
-    const clock = new THREE.Clock();
+    // --- 3. INPUT HANDLING (MOUSE & GYRO) ---
     const mouse = new THREE.Vector2();
     const target = new THREE.Vector2();
     const windowHalfX = window.innerWidth / 2;
     const windowHalfY = window.innerHeight / 2;
-    
+    let isGyroActive = false;
+
+    // Mouse Fallback (for desktop testing)
     document.addEventListener( 'mousemove', ( event ) => {
+        if (isGyroActive) return;
         mouse.x = ( event.clientX - windowHalfX );
         mouse.y = ( event.clientY - windowHalfY );
     });
 
+    // Gyro Handler (Works on Android out of the box via button click)
+    function handleOrientation(event) {
+        const x = event.gamma || 0; // Tilt Left/Right
+        const y = event.beta || 0;  // Tilt Front/Back
+
+        // Map tilt to screen coordinates, with damping (divide by 30)
+        // Offset y by -45 for natural holding angle
+        mouse.x = (x / 30) * windowHalfX; 
+        mouse.y = ((y - 45) / 30) * windowHalfY;
+    }
+
+    // Permission/Start Button Logic
+    const startBtn = document.getElementById('startBtn');
+    const overlay = document.getElementById('overlay');
+
+    startBtn.addEventListener('click', () => {
+        // 1. Fade out overlay
+        overlay.style.opacity = '0';
+        overlay.style.visibility = 'hidden'; // Use visibility to prevent clicking after fade
+
+        // 2. Activate Gyro
+        // This 'if' checks specifically for iOS 13+ permission requirement
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response == 'granted') {
+                        isGyroActive = true;
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Android and older devices fall into this category.
+            // The user gesture (clicking the button) is enough to start the event listener.
+            isGyroActive = true;
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
+    });
+
+
+    // --- 4. ANIMATION ---
+    const clock = new THREE.Clock();
+    
     function animate() {
       requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
 
       textMaterial.uniforms.uTime.value = t;
-
       mesh.rotation.y = t * 0.05;
-      coreMesh.rotation.y = t * 0.2;
-      coreMesh.rotation.z = t * 0.1;
-      
+      coreMesh.rotation.y = t * 0.2; coreMesh.rotation.z = t * 0.1;
       const pulse = 10 + Math.sin(t * 2) * 2;
       glowSprite.scale.set(pulse, pulse, 1);
       
+      // Smooth Camera Movement (Lerp)
       target.x = mouse.x * 0.001;
       target.y = mouse.y * 0.001;
+      
       camera.position.x += ( 5 * target.x - camera.position.x ) * 0.05;
       camera.position.y += ( 6 + 5 * -target.y - camera.position.y ) * 0.05;
       camera.lookAt( 0, 0, 0 );
